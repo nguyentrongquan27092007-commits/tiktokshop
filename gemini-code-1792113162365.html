@@ -1,0 +1,1327 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TikTok Shop Intelligence - Wavecatch</title>
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- React & React DOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+
+  <!-- Babel để dịch JSX trên trình duyệt -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Recharts -->
+  <script src="https://unpkg.com/recharts@2.12.7/umd/Recharts.js"></script>
+
+  <style>
+    @import url("https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap");
+    .ts-root {
+      --bg:#f0f1f3; --surface:#fafafb; --ink:#121315; --muted:#5a5e66; --line:#dcdee3; --accent:#d9441f; --accent-ink:#fafafb; --tint:#fbe6de;
+      font-family:"Outfit",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; background:var(--bg); color:var(--ink); min-height:100dvh;
+    }
+    @media (prefers-color-scheme:dark){
+      .ts-root{--bg:#0e0f11;--surface:#17181b;--ink:#eeeef0;--muted:#9c9fa8;--line:#27292e;--accent:#ff7a50;--accent-ink:#0e0f11;--tint:#2a1913}
+      .ts-root .bg-white{background:var(--surface)!important}
+      .ts-root .bg-slate-50,.ts-root .bg-slate-100{background:var(--bg)!important}
+      .ts-root .text-slate-900{color:var(--ink)!important}
+      .ts-root .text-slate-500,.ts-root .text-slate-600,.ts-root .text-slate-700{color:var(--muted)!important}
+      .ts-root .border-slate-200{border-color:var(--line)!important}
+      .ts-root .border-slate-100,.ts-root .divide-slate-100>*{border-color:var(--line)!important}
+      .ts-root select,.ts-root input{background:var(--surface);color:var(--ink)}
+      .ts-root .hover\:bg-slate-50:hover,.ts-root .hover\:bg-slate-100:hover{background:var(--tint)!important}
+      .ts-root .bg-emerald-50,.ts-root .bg-amber-50,.ts-root .bg-red-50,.ts-root .bg-sky-50{background:var(--tint)!important}
+      .ts-root .text-emerald-800{color:#6ee7b7!important}.ts-root .text-amber-800{color:#fcd34d!important}
+      .ts-root .text-red-800{color:#fca5a5!important}.ts-root .text-sky-800{color:#7dd3fc!important}
+    }
+    .ts-accent-bg{background:var(--accent);color:var(--accent-ink)}
+    .ts-accent-bg:hover{filter:brightness(.93)}
+    .ts-btn{display:inline-flex;align-items:center;gap:.5rem;height:46px;padding:0 1.25rem;border-radius:12px;font-weight:600;font-size:.95rem;white-space:nowrap;
+      transition:transform .25s cubic-bezier(.16,1,.3,1),filter .25s,background-color .25s}
+    .ts-btn:hover{transform:translateY(-1px)}.ts-btn:active{transform:translateY(1px) scale(.98)}
+    .ts-btn-primary{background:var(--accent);color:var(--accent-ink)}
+    .ts-btn-ghost{border:1px solid var(--line);background:var(--surface);color:var(--ink)}
+    .ts-btn-light{background:var(--surface);color:var(--accent)}
+    .ts-tile{border-radius:16px;padding:1.75rem;background:var(--surface);border:1px solid var(--line)}
+    .ts-tile-accent{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+    .ts-muted{color:var(--muted)}
+    .ts-reveal{opacity:0;transform:translateY(18px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+    .ts-reveal.is-in{opacity:1;transform:none}
+    @keyframes ts-rise{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:none}}
+    .ts-rise{opacity:0;animation:ts-rise .8s cubic-bezier(.16,1,.3,1) forwards}
+    .ts-hero{min-height:calc(100dvh - 64px)}
+    @media (prefers-reduced-motion:reduce){.ts-reveal{opacity:1;transform:none;transition:none}.ts-rise{opacity:1;animation:none}.ts-btn{transition:none}}
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React Code Executed via Babel -->
+  <script type="text/babel">
+    const { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } = React;
+    const { CartesianGrid, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip: RTooltip, XAxis, YAxis } = Recharts;
+
+    // Wrapper component cho Lucide icons
+    const Icon = ({ name, className, ...props }) => {
+      const elRef = useRef(null);
+      useEffect(() => {
+        if (elRef.current && window.lucide) {
+          elRef.current.innerHTML = `<i data-lucide="${name}" class="${className || ''}"></i>`;
+          window.lucide.createIcons({
+            attrs: { class: className || '' },
+            nameAttr: 'data-lucide',
+            el: elRef.current
+          });
+        }
+      }, [name, className]);
+      return <span ref={elRef} className="inline-flex items-center justify-center shrink-0" {...props} />;
+    };
+
+    const ArrowDown = (p) => <Icon name="arrow-down" {...p} />;
+    const ArrowRight = (p) => <Icon name="arrow-right" {...p} />;
+    const ArrowUp = (p) => <Icon name="arrow-up" {...p} />;
+    const Ban = (p) => <Icon name="ban" {...p} />;
+    const Calculator = (p) => <Icon name="calculator" {...p} />;
+    const Check = (p) => <Icon name="check" {...p} />;
+    const ChevronsUpDown = (p) => <Icon name="chevrons-up-down" {...p} />;
+    const CircleAlert = (p) => <Icon name="circle-alert" {...p} />;
+    const Download = (p) => <Icon name="download" {...p} />;
+    const Eye = (p) => <Icon name="eye" {...p} />;
+    const FlaskConical = (p) => <Icon name="flask-conical" {...p} />;
+    const Info = (p) => <Icon name="info" {...p} />;
+    const LayoutList = (p) => <Icon name="layout-list" {...p} />;
+    const Minus = (p) => <Icon name="minus" {...p} />;
+    const PackageCheck = (p) => <Icon name="package-check" {...p} />;
+    const Radio = (p) => <Icon name="radio" {...p} />;
+    const Search = (p) => <Icon name="search" {...p} />;
+    const Star = (p) => <Icon name="star" {...p} />;
+    const TrendingUp = (p) => <Icon name="trending-up" {...p} />;
+    const TriangleAlert = (p) => <Icon name="triangle-alert" {...p} />;
+    const Users = (p) => <Icon name="users" {...p} />;
+    const Video = (p) => <Icon name="video" {...p} />;
+    const X = (p) => <Icon name="x" {...p} />;
+
+    /* 1. FORMAT + PROVENANCE */
+    const nf = new Intl.NumberFormat("en-US");
+    const vnd = (n) => `${n < 0 ? "−" : ""}${nf.format(Math.round(Math.abs(n)))} ₫`;
+    const pct = (n, digits = 1) => `${(n * 100).toFixed(digits)}%`;
+    const clamp = (n, min, max) => Math.min(Math.max(n, min), max);
+    const signedPct = (n, digits = 0) => `${n > 0 ? "+" : n < 0 ? "−" : ""}${Math.abs(n).toFixed(digits)}%`;
+    const ratio = (n) => `${n.toFixed(1)}x`;
+    const compact = (n) => (n >= 1_000_000 ? `${(n / 1_000_000).toFixed(1)}M` : n >= 1_000 ? `${Math.round(n / 1_000)}K` : String(n));
+    const formatDateTime = (iso) =>
+      new Intl.DateTimeFormat("en-US", { dateStyle: "short", timeStyle: "short", timeZone: "Asia/Ho_Chi_Minh" }).format(new Date(iso));
+
+    const LAYER_TITLE = { ESTIMATED: "Estimated data", PUBLIC: "Public data", FIRST_PARTY: "Your shop's data" };
+
+    /* 2. UI PRIMITIVES */
+    const cx = (...a) => a.filter(Boolean).join(" ");
+
+    const BADGE = {
+      default: "border-transparent ts-accent-bg",
+      secondary: "border-transparent bg-slate-100 text-slate-700",
+      outline: "border-slate-200 text-slate-800",
+    };
+    function Badge({ variant = "default", className, children }) {
+      return (
+        <span className={cx("inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium whitespace-nowrap", BADGE[variant], className)}>
+          {children}
+        </span>
+      );
+    }
+
+    const BTN_V = {
+      default: "ts-accent-bg",
+      outline: "border border-slate-200 bg-white hover:bg-slate-50",
+      ghost: "hover:bg-slate-100",
+      link: "text-slate-900 underline-offset-4 hover:underline",
+    };
+    const BTN_S = { default: "h-9 px-4 text-sm", sm: "h-8 px-3 text-sm", icon: "h-7 w-7" };
+    function Button({ variant = "default", size = "default", className, ...p }) {
+      return (
+        <button type="button" {...p}
+          className={cx("inline-flex items-center justify-center rounded-md font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 disabled:pointer-events-none disabled:opacity-50", BTN_V[variant], BTN_S[size], className)} />
+      );
+    }
+
+    const Card = ({ className, ...p }) => <div className={cx("rounded-xl border border-slate-200 bg-white shadow-sm", className)} {...p} />;
+    const CardHeader = ({ className, ...p }) => <div className={cx("flex flex-col space-y-1.5 p-5", className)} {...p} />;
+    const CardTitle = ({ className, ...p }) => <h3 className={cx("font-semibold leading-none tracking-tight", className)} {...p} />;
+    const CardDescription = ({ className, ...p }) => <p className={cx("text-sm text-slate-500", className)} {...p} />;
+    const CardContent = ({ className, ...p }) => <div className={cx("p-5 pt-0", className)} {...p} />;
+
+    const Input = ({ className, ...p }) => (
+      <input className={cx("h-9 w-full rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-400", className)} {...p} />
+    );
+    const Label = ({ className, ...p }) => <label className={cx("text-sm font-medium", className)} {...p} />;
+
+    function Select({ value, onChange, options, className, label }) {
+      return (
+        <select aria-label={label} value={value} onChange={(e) => onChange(e.target.value)}
+          className={cx("h-9 rounded-md border border-slate-200 bg-white px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-400", className)}>
+          {options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+        </select>
+      );
+    }
+
+    function Tabs({ value, onChange, items, className }) {
+      return (
+        <div role="tablist" className={cx("inline-flex rounded-lg bg-slate-100 p-1", className)}>
+          {items.map(([v, l, Icon]) => (
+            <button key={v} role="tab" aria-selected={value === v} onClick={() => onChange(v)}
+              className={cx("inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition",
+                value === v ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-900")}>
+              {Icon && <Icon className="h-4 w-4" aria-hidden />}{l}
+            </button>
+          ))}
+        </div>
+      );
+    }
+
+    function ProvenanceTooltip({ layer, detail, children, underline = true }) {
+      const [open, setOpen] = useState(false);
+      return (
+        <span className="relative inline-flex" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+          <span tabIndex={0} onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
+            className={cx("inline-flex cursor-help items-center gap-1 rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-slate-400",
+              underline && "underline decoration-dotted decoration-slate-400 underline-offset-4")}>
+            {children}
+          </span>
+          {open && (
+            <span role="tooltip" className="absolute left-0 top-full z-50 mt-1.5 w-64 max-w-xs space-y-1 rounded-md bg-slate-900 px-3 py-2 text-left text-xs font-normal text-white shadow-lg">
+              <span className="block font-medium">{LAYER_TITLE[layer]}</span>
+              {detail && <span className="block whitespace-normal opacity-90">{detail}</span>}
+            </span>
+          )}
+        </span>
+      );
+    }
+
+    /* 3. MOCK DATA */
+    const est = (value, low, high) => ({ value, low, high, confidenceLevel: 0.8 });
+    const saturationLevel = (s) => (s >= 70 ? "RED" : s >= 40 ? "YELLOW" : "GREEN");
+    const SATURATION_LABEL = { GREEN: "Room to grow", YELLOW: "Watch closely", RED: "Saturated" };
+    const SATURATION_STYLE = {
+      GREEN: { dot: "bg-emerald-500", cls: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+      YELLOW: { dot: "bg-amber-500", cls: "border-amber-200 bg-amber-50 text-amber-800" },
+      RED: { dot: "bg-red-500", cls: "border-red-200 bg-red-50 text-red-800" },
+    };
+
+    const PRODUCTS_AS_OF = "2026-10-16T06:00:00+07:00";
+    const CATEGORIES = ["Beauty", "Fashion", "Home", "Electronics", "Mom & baby", "Sports"];
+
+    const MOCK_PRODUCTS = [
+      { id: "p01", name: "Tone-up sunscreen SPF50+ 50ml", category: "Beauty", price: 189000, growth: est(42, 31, 55), shopCount: 214, saturationScore: 72, saturationSignals: ["Shop count up 38% in 30 days", "Average price down 9%"] },
+      { id: "p02", name: "Vitamin C brightening serum 30ml", category: "Beauty", price: 245000, growth: est(18, 8, 29), shopCount: 96, saturationScore: 51, saturationSignals: ["Shop count up 14% in 30 days"] },
+      { id: "p03", name: "Gentle face wash for sensitive skin 150ml", category: "Beauty", price: 129000, growth: est(-6, -15, 3), shopCount: 187, saturationScore: 68, saturationSignals: ["Growth has slowed for 3 weeks in a row", "Many shops are cutting prices"] },
+      { id: "p04", name: "Oversized unisex cotton tee", category: "Fashion", price: 99000, growth: est(9, -2, 21), shopCount: 412, saturationScore: 91, saturationSignals: ["412 shops sell similar products", "Average price down 17% in 60 days"] },
+      { id: "p05", name: "Printed canvas tote bag", category: "Fashion", price: 79000, growth: est(64, 41, 90), shopCount: 38, saturationScore: 27, saturationSignals: ["Few competing shops", "Few creators promoting it so far"] },
+      { id: "p06", name: "Soft non-slip indoor slippers", category: "Home", price: 69000, growth: est(121, 86, 160), shopCount: 73, saturationScore: 44, saturationSignals: ["Cold season is lifting demand, may be seasonal"] },
+      { id: "p07", name: "6L air fryer", category: "Home", price: 1290000, growth: est(5, -4, 15), shopCount: 58, saturationScore: 49, saturationSignals: ["Big brands take most of the sales"] },
+      { id: "p08", name: "Stainless steel insulated bottle 750ml", category: "Home", price: 159000, growth: est(27, 16, 39), shopCount: 129, saturationScore: 63, saturationSignals: ["Shop count up 22% in 30 days"] },
+      { id: "p09", name: "Motion-sensor LED night light", category: "Home", price: 119000, growth: est(88, 57, 124), shopCount: 31, saturationScore: 22, saturationSignals: ["Strong growth, few rivals"] },
+      { id: "p10", name: "TWS wireless bluetooth earbuds", category: "Electronics", price: 259000, growth: est(-14, -24, -4), shopCount: 301, saturationScore: 88, saturationSignals: ["301 competing shops", "Estimated sales down 4 weeks in a row"] },
+      { id: "p11", name: "Clear shockproof iPhone case", category: "Electronics", price: 59000, growth: est(12, 1, 24), shopCount: 268, saturationScore: 82, saturationSignals: ["268 competing shops", "Very thin price margin"] },
+      { id: "p12", name: "USB rechargeable handheld mini fan", category: "Electronics", price: 89000, growth: est(-31, -45, -17), shopCount: 142, saturationScore: 75, saturationSignals: ["Demand falling with the season", "High inventory at many shops"] },
+      { id: "p13", name: "100-piece wooden building blocks for kids", category: "Mom & baby", price: 175000, growth: est(36, 20, 54), shopCount: 47, saturationScore: 35, saturationSignals: ["Shop count is stable", "6 mom & baby creators are promoting it"] },
+      { id: "p14", name: "Anti-colic baby bottle 240ml", category: "Mom & baby", price: 139000, growth: est(8, -5, 22), shopCount: 84, saturationScore: 46, saturationSignals: ["Price competition among top sellers"] },
+      { id: "p15", name: "Non-slip TPE yoga mat 6mm", category: "Sports", price: 149000, growth: est(23, 9, 38), shopCount: 66, saturationScore: 41, saturationSignals: ["Shop count up 9% in 30 days"] },
+      { id: "p16", name: "5-piece gym resistance band set", category: "Sports", price: 99000, growth: est(51, 33, 72), shopCount: 52, saturationScore: 33, saturationSignals: ["Steady growth, moderate competition"] },
+    ];
+
+    const MOCK_CREATORS = [
+      { id: "c01", name: "Minh Anh Review", handle: "@minhanh.review", category: "Beauty", contentType: "VIDEO", followers: 184000, videosLast30d: 22, livesLast30d: 0, roi: est(2.8, 2.1, 3.6), fitScore: 91, fitReasons: ["78% of content is beauty", "Engagement above the category average", "Has promoted 9 products priced 100-300K"] },
+      { id: "c02", name: "Ha My Beauty", handle: "@hamy.beauty", category: "Beauty", contentType: "BOTH", followers: 512000, videosLast30d: 14, livesLast30d: 8, roi: est(2.1, 1.3, 3.2), fitScore: 84, fitReasons: ["Matches the category", "Large following but engagement fluctuates"] },
+      { id: "c03", name: "Lan's Kitchen", handle: "@bepnhalan", category: "Home", contentType: "LIVE", followers: 97000, videosLast30d: 3, livesLast30d: 19, roi: est(3.4, 2.4, 4.6), fitScore: 88, fitReasons: ["Sells live on a regular schedule", "Audience cares about kitchenware", "High share of sales content"] },
+      { id: "c04", name: "Tuan Gadget", handle: "@tuan.gadget", category: "Electronics", contentType: "VIDEO", followers: 326000, videosLast30d: 17, livesLast30d: 0, roi: est(1.4, 0.8, 2.3), fitScore: 62, fitReasons: ["Matches the category", "Highly competitive category, so performance is lower"] },
+      { id: "c05", name: "Thao Mom & Baby", handle: "@thao.mebe", category: "Mom & baby", contentType: "BOTH", followers: 143000, videosLast30d: 12, livesLast30d: 6, roi: est(2.6, 1.9, 3.5), fitScore: 86, fitReasons: ["Audience is mostly parents aged 25-35", "Has a history of promoting baby products"] },
+      { id: "c06", name: "Khoa Fitness", handle: "@khoa.fit", category: "Sports", contentType: "VIDEO", followers: 68000, videosLast30d: 25, livesLast30d: 1, roi: est(1.9, 1.0, 3.0), fitScore: 73, fitReasons: ["Matches the category", "Small scale, so the estimate range is wide"] },
+      { id: "c07", name: "Linh Decor", handle: "@linh.decor", category: "Home", contentType: "VIDEO", followers: 221000, videosLast30d: 10, livesLast30d: 0, roi: est(2.3, 1.6, 3.1), fitScore: 79, fitReasons: ["Home decor content", "Few products overlap with rivals"] },
+      { id: "c08", name: "Phuong Style", handle: "@phuong.style", category: "Fashion", contentType: "LIVE", followers: 405000, videosLast30d: 5, livesLast30d: 16, roi: est(1.2, 0.6, 2.1), fitScore: 54, fitReasons: ["Lots of lives but low estimated conversion", "Audience does not match the product"] },
+      { id: "c09", name: "Nam Tech Review", handle: "@nam.techreview", category: "Electronics", contentType: "BOTH", followers: 58000, videosLast30d: 9, livesLast30d: 4, roi: est(2.9, 1.7, 4.4), fitScore: 77, fitReasons: ["Good engagement for its size", "Has not promoted many competing products"] },
+    ];
+
+    const ALERT_TYPE_LABEL = { SATURATION: "Saturated", GROWTH: "Growth", PRICE: "Price", CREATOR: "Creator" };
+    const MOCK_ALERTS = [
+      { id: "a1", entityKind: "PRODUCT", entityId: "p01", severity: "CRITICAL", type: "SATURATION", capturedAt: "2026-10-16T06:00:00+07:00",
+        title: "Saturation score crossed the red threshold", explanation: "Competing shop count rose fast in 30 days and the average price is falling.",
+        evidence: { layer: "ESTIMATED", label: "Saturation score", before: "64/100", after: "72/100", detail: "Model v0.1 (mock)" } },
+      { id: "a2", entityKind: "PRODUCT", entityId: "p06", severity: "WARNING", type: "GROWTH", capturedAt: "2026-10-15T18:00:00+07:00",
+        title: "Sudden growth, possibly seasonal", explanation: "A rise above 100% in 7 days rarely lasts if demand is seasonal.",
+        evidence: { layer: "ESTIMATED", label: "7-day growth", before: "+74%", after: "+121%", detail: "80% confidence range: +86% to +160%" } },
+      { id: "a3", entityKind: "PRODUCT", entityId: "p10", severity: "WARNING", type: "GROWTH", capturedAt: "2026-10-14T09:00:00+07:00",
+        title: "Estimated sales down 4 weeks in a row", explanation: "A long decline in a market with over 300 shops.",
+        evidence: { layer: "ESTIMATED", label: "7-day growth", before: "−6%", after: "−14%" } },
+      { id: "a4", entityKind: "PRODUCT", entityId: "p05", severity: "INFO", type: "PRICE", capturedAt: "2026-10-13T12:00:00+07:00",
+        title: "Average price dipped slightly", explanation: "A few new shops entered with prices 5% lower.",
+        evidence: { layer: "PUBLIC", label: "Average price", before: "83.000 ₫", after: "79.000 ₫" } },
+      { id: "a5", entityKind: "CREATOR", entityId: "c03", severity: "INFO", type: "CREATOR", capturedAt: "2026-10-13T16:45:00+07:00",
+        title: "Live session count rose", explanation: "The creator increased live selling frequency over the last 30 days.",
+        evidence: { layer: "PUBLIC", label: "Live sessions / 30 days", before: "14", after: "19" } },
+    ];
+
+    const entityName = (kind, id) =>
+      (kind === "PRODUCT" ? MOCK_PRODUCTS.find((p) => p.id === id)?.name : MOCK_CREATORS.find((c) => c.id === id)?.name) ?? id;
+
+    /* 4. CSV + EXPORT */
+    const FORMULA_TRIGGER = /^[=+\-@\t\r]/;
+
+    function csvCell(v) {
+      if (v === null || v === undefined) return "";
+      let s;
+      if (typeof v === "number") s = Number.isFinite(v) ? String(v) : "";
+      else {
+        s = String(v);
+        if (typeof v === "string" && FORMULA_TRIGGER.test(s)) s = `'${s}`;
+      }
+      return /[",\r\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }
+
+    function toCsv(rows, columns, { bom = true } = {}) {
+      const lines = [columns.map((c) => csvCell(c.header)).join(","), ...rows.map((r) => columns.map((c) => csvCell(c.value(r))).join(","))];
+      return (bom ? "\uFEFF" : "") + lines.join("\r\n") + "\r\n";
+    }
+
+    function downloadCsv(filename, csv) {
+      const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+      const a = document.createElement("a");
+      a.href = url; a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function filenameTimestamp(d = new Date()) {
+      const p = (n) => String(n).padStart(2, "0");
+      return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+    }
+
+    const PRODUCT_CSV_COLUMNS = [
+      { header: "Product name", value: (p) => p.name },
+      { header: "Category", value: (p) => p.category },
+      { header: "Price (VND) [Public]", value: (p) => p.price },
+      { header: "7-day growth (%) [Estimated]", value: (p) => p.growth.value },
+      { header: "Growth - lower bound (%) [Estimated]", value: (p) => p.growth.low },
+      { header: "Growth - upper bound (%) [Estimated]", value: (p) => p.growth.high },
+      { header: "Confidence level of the estimate range", value: (p) => `${Math.round(p.growth.confidenceLevel * 100)}%` },
+      { header: "Competing shops [Public]", value: (p) => p.shopCount },
+      { header: "Saturation score 0-100 [Estimated]", value: (p) => p.saturationScore },
+      { header: "Saturation status [Estimated]", value: (p) => SATURATION_LABEL[saturationLevel(p.saturationScore)] },
+      { header: "Saturation signals [Estimated]", value: (p) => p.saturationSignals.join("; ") },
+      { header: "Public data collected at", value: () => PRODUCTS_AS_OF },
+    ];
+    const productsToCsv = (rows) => toCsv(rows, PRODUCT_CSV_COLUMNS);
+    const exportProductsCsv = (rows) => downloadCsv(`san-pham_${filenameTimestamp()}.csv`, productsToCsv(rows));
+
+    /* 5. RULES - Decision Brief engine */
+    const BRIEF_ENGINE_VERSION = "0.1.0-mock";
+    const RECOMMENDATION_RANK = { SOURCE_NOW: 0, TEST_SMALL: 1, MONITOR: 2, SKIP: 3 };
+    const HEADLINE = { SOURCE_NOW: "Source now", TEST_SMALL: "Test with a small batch", MONITOR: "Keep monitoring", SKIP: "Skip" };
+    const NEXT_STEPS = {
+      SOURCE_NOW: ["Calculate margin with your real cost price", "Ask the supplier about minimum order quantity", "Set price and saturation alerts"],
+      TEST_SMALL: ["Calculate margin with your real cost price", "Order a small batch to validate demand", "Review growth again after 7 days"],
+      MONITOR: ["Keep monitoring for 7-14 days", "Wait for growth to stabilize or rivals to thin out, then reassess"],
+      SKIP: ["Not a sourcing priority right now", "Find products with room to grow on the Rising products page"],
+    };
+
+    function buildBrief(p) {
+      const { growth: g, saturationScore: sat, shopCount } = p;
+      const relWidth = (g.high - g.low) / Math.max(Math.abs(g.value), 20);
+
+      let recommendation;
+      if ((sat >= 70 && g.value < 15) || (g.value < 0 && sat >= 60)) recommendation = "SKIP";
+      else if (sat >= 70) recommendation = "MONITOR";
+      else if (sat < 35 && g.low >= 30) recommendation = "SOURCE_NOW";
+      else if (sat < 50 && g.low > 0 && g.value >= 20) recommendation = "TEST_SMALL";
+      else recommendation = "MONITOR";
+
+      const summary =
+        recommendation === "SOURCE_NOW" ? "Clear upward trend and low competition."
+        : recommendation === "TEST_SMALL" ? "Rising trend, but not certain enough for a large order."
+        : recommendation === "SKIP" ? "Weak or falling trend in a crowded market."
+        : sat >= 70 ? "Trend is still rising but the market is saturated."
+        : "Signals are not clear enough to decide.";
+
+      const evidence = [
+        { key: "growth_7d", label: "7-day growth", layer: "ESTIMATED", valueText: `${signedPct(g.value)} (${signedPct(g.low)} to ${signedPct(g.high)})`,
+          stance: g.low > 0 ? "SUPPORTS" : g.value < 0 ? "CONTRADICTS" : "NEUTRAL" },
+        { key: "saturation", label: "Saturation score", layer: "ESTIMATED", valueText: `${sat}/100`,
+          stance: sat < 40 ? "SUPPORTS" : sat >= 70 ? "CONTRADICTS" : "NEUTRAL" },
+        { key: "shop_count", label: "Competing shops", layer: "PUBLIC", valueText: `${shopCount} shop`,
+          stance: shopCount < 60 ? "SUPPORTS" : shopCount >= 200 ? "CONTRADICTS" : "NEUTRAL" },
+      ];
+
+      const risks = [{ category: "MARGIN", severity: "MEDIUM", text: "Margin not checked yet. Use the Profit Calculator with your real cost price." }];
+      if (sat >= 40) risks.push({ category: "SATURATION", severity: sat >= 70 ? "HIGH" : "MEDIUM", text: `${shopCount} competing shops, saturation score ${sat}/100.` });
+      if (relWidth > 0.6) risks.push({ category: "DATA_QUALITY", severity: "MEDIUM", text: `The growth estimate range is wide (${signedPct(g.low)} to ${signedPct(g.high)}), so the conclusion may change.` });
+      if (g.value >= 100) risks.push({ category: "DEMAND_VOLATILITY", severity: "MEDIUM", text: "A spike may come from seasonality or a short campaign." });
+
+      return {
+        productId: p.id, recommendation, confidence: clamp(0.9 - relWidth * 0.4, 0.35, 0.9),
+        headline: HEADLINE[recommendation], summary, evidence, risks, nextSteps: NEXT_STEPS[recommendation], engineVersion: BRIEF_ENGINE_VERSION,
+      };
+    }
+
+    /* 6. STORE - Watchlist */
+    const SEED_WATCH = [
+      { kind: "PRODUCT", id: "p01", addedAt: "2026-10-09T08:00:00+07:00" },
+      { kind: "PRODUCT", id: "p05", addedAt: "2026-10-11T09:30:00+07:00" },
+      { kind: "PRODUCT", id: "p06", addedAt: "2026-10-12T10:15:00+07:00" },
+      { kind: "PRODUCT", id: "p10", addedAt: "2026-10-05T14:00:00+07:00" },
+      { kind: "CREATOR", id: "c03", addedAt: "2026-10-13T16:45:00+07:00" },
+    ];
+
+    const WatchlistCtx = createContext(null);
+    const useWatchlist = () => useContext(WatchlistCtx);
+
+    function WatchlistProvider({ children }) {
+      const [items, setItems] = useState(SEED_WATCH);
+      const [dismissed, setDismissed] = useState([]);
+      const same = (a, kind, id) => a.kind === kind && a.id === id;
+
+      const toggle = useCallback((kind, id) =>
+        setItems((s) => (s.some((i) => same(i, kind, id)) ? s.filter((i) => !same(i, kind, id)) : [{ kind, id, addedAt: new Date().toISOString() }, ...s])), []);
+      const remove = useCallback((kind, id) => setItems((s) => s.filter((i) => !same(i, kind, id))), []);
+      const dismissAlert = useCallback((id) => setDismissed((d) => [...new Set([...d, id])]), []);
+      const restoreAlerts = useCallback(() => setDismissed([]), []);
+
+      const value = useMemo(() => ({ items, dismissed, toggle, remove, dismissAlert, restoreAlerts }), [items, dismissed, toggle, remove, dismissAlert, restoreAlerts]);
+      return <WatchlistCtx.Provider value={value}>{children}</WatchlistCtx.Provider>;
+    }
+
+    function WatchButton({ kind, id, name }) {
+      const { items, toggle } = useWatchlist();
+      const on = items.some((i) => i.kind === kind && i.id === id);
+      return (
+        <Button variant="ghost" size="icon" onClick={() => toggle(kind, id)} aria-pressed={on}
+          aria-label={on ? `Unwatch ${name}` : `Watch ${name}`}>
+          <Star className={cx("h-4 w-4", on ? "fill-amber-400 text-amber-500" : "text-slate-400")} aria-hidden />
+        </Button>
+      );
+    }
+
+    /* 7. PRODUCTS TABLE */
+    const PRICE_BANDS = {
+      all: { label: "Any price", test: () => true },
+      lt100: { label: "Under ₫100,000", test: (p) => p < 100000 },
+      mid: { label: "₫100,000 - ₫300,000", test: (p) => p >= 100000 && p <= 300000 },
+      gt300: { label: "Over ₫300,000", test: (p) => p > 300000 },
+    };
+    const SORT_VALUE = { price: (p) => p.price, growth: (p) => p.growth.value, shops: (p) => p.shopCount, saturation: (p) => p.saturationScore };
+
+    const Th = ({ className, ...p }) => <th className={cx("h-11 whitespace-nowrap px-3 text-left align-middle text-sm font-medium text-slate-500", className)} {...p} />;
+    const Td = ({ className, ...p }) => <td className={cx("px-3 py-3 align-middle text-sm", className)} {...p} />;
+
+    function SortHead({ label, k, sort, onSort, tip, className }) {
+      const active = sort?.key === k;
+      const Icon = !active ? ChevronsUpDown : sort.dir === "asc" ? ArrowUp : ArrowDown;
+      return (
+        <Th className={className} aria-sort={active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"}>
+          <div className={cx("flex items-center gap-1", className?.includes("text-right") && "justify-end")}>
+            <Button variant="ghost" size="sm" className="-ml-3 h-8 px-3" onClick={() => onSort(k)}>
+              {label}<Icon className="ml-1 h-3.5 w-3.5" aria-hidden />
+            </Button>
+            {tip}
+          </div>
+        </Th>
+      );
+    }
+
+    function ProductsTable() {
+      const [q, setQ] = useState("");
+      const [category, setCategory] = useState("all");
+      const [saturation, setSaturation] = useState("all");
+      const [band, setBand] = useState("all");
+      const [sort, setSort] = useState({ key: "growth", dir: "desc" });
+
+      const hasFilter = q !== "" || category !== "all" || saturation !== "all" || band !== "all";
+      const reset = () => { setQ(""); setCategory("all"); setSaturation("all"); setBand("all"); };
+      const onSort = (key) => setSort((s) => (s?.key !== key ? { key, dir: "desc" } : s.dir === "desc" ? { key, dir: "asc" } : null));
+
+      const rows = useMemo(() => {
+        const needle = q.trim().toLowerCase();
+        const list = MOCK_PRODUCTS.filter((p) =>
+          (needle === "" || p.name.toLowerCase().includes(needle)) &&
+          (category === "all" || p.category === category) &&
+          (saturation === "all" || saturationLevel(p.saturationScore) === saturation) &&
+          PRICE_BANDS[band].test(p.price));
+        if (sort) {
+          const get = SORT_VALUE[sort.key];
+          list.sort((a, b) => (sort.dir === "asc" ? get(a) - get(b) : get(b) - get(a)));
+        }
+        return list;
+      }, [q, category, saturation, band, sort]);
+
+      const tip = (layer, detail) => (
+        <ProvenanceTooltip layer={layer} detail={detail} underline={false}>
+          <Info className="h-3.5 w-3.5 text-slate-400" aria-label="See data source" />
+        </ProvenanceTooltip>
+      );
+
+      return (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative min-w-56 flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" aria-hidden />
+              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by product name" className="pl-9" aria-label="Search by product name" />
+            </div>
+            <Select label="Category" value={category} onChange={setCategory} className="w-44"
+              options={[["all", "All categories"], ...CATEGORIES.map((c) => [c, c])]} />
+            <Select label="Price range" value={band} onChange={setBand} className="w-48"
+              options={Object.entries(PRICE_BANDS).map(([k, v]) => [k, v.label])} />
+            <Select label="Saturation level" value={saturation} onChange={setSaturation} className="w-44"
+              options={[["all", "Any saturation level"], ["GREEN", "Room to grow"], ["YELLOW", "Watch closely"], ["RED", "Saturated"]]} />
+            {hasFilter && <Button variant="ghost" size="sm" onClick={reset}><X className="mr-1 h-4 w-4" aria-hidden />Clear filters</Button>}
+            <Button variant="outline" size="sm" className="ml-auto" disabled={rows.length === 0} onClick={() => exportProductsCsv(rows)}>
+              <Download className="mr-1.5 h-4 w-4" aria-hidden />Export CSV
+            </Button>
+          </div>
+
+          <p className="text-sm text-slate-500">
+            {rows.length}/{MOCK_PRODUCTS.length} products · Price and shop count collected at {formatDateTime(PRODUCTS_AS_OF)} (about 6 hours of delay)
+          </p>
+
+          <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+            <table className="w-full border-collapse">
+              <thead className="border-b border-slate-200">
+                <tr>
+                  <Th className="w-10"><span className="sr-only">Watch</span></Th>
+                  <Th className="min-w-64">Products</Th>
+                  <Th>Category</Th>
+                  <SortHead label="Price" k="price" sort={sort} onSort={onSort} className="text-right" tip={tip("PUBLIC", "Listed price observed at collection time.")} />
+                  <SortHead label="7-day growth" k="growth" sort={sort} onSort={onSort} className="text-right" tip={tip("ESTIMATED", "Sales growth estimated by the model, with an 80% confidence range.")} />
+                  <SortHead label="Shops" k="shops" sort={sort} onSort={onSort} className="text-right" tip={tip("PUBLIC", "Number of shops selling similar products, counted from public data.")} />
+                  <SortHead label="Saturated" k="saturation" sort={sort} onSort={onSort} tip={tip("ESTIMATED", "Model score 0-100: under 40 green, 40-69 yellow, 70 and above red.")} />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.length === 0 ? (
+                  <tr><Td colSpan={7} className="h-32 text-center text-slate-500">
+                    No products match the filters. <Button variant="link" className="px-1" onClick={reset}>Clear filters</Button>
+                  </Td></tr>
+                ) : rows.map((p) => {
+                  const sat = SATURATION_STYLE[saturationLevel(p.saturationScore)];
+                  const gColor = p.growth.value > 0 ? "text-emerald-600" : p.growth.value < 0 ? "text-red-600" : "";
+                  return (
+                    <tr key={p.id} className="hover:bg-slate-50">
+                      <Td className="w-10 pr-0"><WatchButton kind="PRODUCT" id={p.id} name={p.name} /></Td>
+                      <Td className="font-medium">
+                        <span className="flex items-center gap-3">
+                          <img src={`https://picsum.photos/seed/${p.id}-shop-product/80/80`} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-xl bg-slate-100 object-cover" />
+                          {p.name}
+                        </span>
+                      </Td>
+                      <Td className="text-slate-500">{p.category}</Td>
+                      <Td className="text-right tabular-nums">{vnd(p.price)}</Td>
+                      <Td className="text-right">
+                        <ProvenanceTooltip layer="ESTIMATED" detail={`${p.growth.confidenceLevel * 100}% confidence range: ${signedPct(p.growth.low)} to ${signedPct(p.growth.high)}.`}>
+                          <span className={cx("font-medium tabular-nums", gColor)}>{signedPct(p.growth.value)}</span>
+                        </ProvenanceTooltip>
+                      </Td>
+                      <Td className="text-right tabular-nums">{p.shopCount}</Td>
+                      <Td>
+                        <ProvenanceTooltip underline={false} layer="ESTIMATED" detail={
+                          <>
+                            <span className="block">Saturation score {p.saturationScore}/100. Signals:</span>
+                            <ul className="list-disc pl-4">{p.saturationSignals.map((s) => <li key={s}>{s}</li>)}</ul>
+                          </>
+                        }>
+                          <Badge variant="outline" className={cx("gap-1.5", sat.cls)}>
+                            <span className={cx("h-2 w-2 rounded-full", sat.dot)} aria-hidden />{SATURATION_LABEL[saturationLevel(p.saturationScore)]}
+                          </Badge>
+                        </ProvenanceTooltip>
+                      </Td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    }
+
+    /* 8. CREATORS GRID */
+    const CONTENT_LABEL = { LIVE: "Live", VIDEO: "Video", BOTH: "Live + Video" };
+    function fitBadge(score) {
+      if (score >= 80) return { label: "Excellent fit", cls: "border-emerald-200 bg-emerald-50 text-emerald-800" };
+      if (score >= 65) return { label: "Good fit", cls: "border-sky-200 bg-sky-50 text-sky-800" };
+      return { label: "Weak fit", cls: "border-slate-200 bg-slate-100 text-slate-600" };
+    }
+
+    function ContentTypeBadge({ type }) {
+      return (
+        <Badge variant="secondary" className="gap-1">
+          {type !== "VIDEO" && <Radio className="h-3 w-3" aria-hidden />}
+          {type !== "LIVE" && <Video className="h-3 w-3" aria-hidden />}
+          {CONTENT_LABEL[type]}
+        </Badge>
+      );
+    }
+
+    function CreatorCard({ c }) {
+      const fit = fitBadge(c.fitScore);
+      return (
+        <Card>
+          <CardHeader className="flex-row items-start gap-3 space-y-0">
+            <img src={`https://picsum.photos/seed/${c.id}-portrait/120/120`} alt={c.name} loading="lazy" className="h-12 w-12 shrink-0 rounded-full bg-slate-100 object-cover" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-semibold">{c.name}</p>
+              <p className="truncate text-sm text-slate-500">{c.handle}</p>
+            </div>
+            <WatchButton kind="CREATOR" id={c.id} name={c.name} />
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <ProvenanceTooltip layer="ESTIMATED" underline={false} detail={
+              <>
+                <span className="block">Fit score {c.fitScore}/100 is calculated by the model, not a real figure. Basis:</span>
+                <ul className="list-disc pl-4">{c.fitReasons.map((x) => <li key={x}>{x}</li>)}</ul>
+              </>
+            }>
+              <Badge variant="outline" className={fit.cls}>Fit: {fit.label} · {c.fitScore}</Badge>
+            </ProvenanceTooltip>
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="outline">{c.category}</Badge>
+              <ContentTypeBadge type={c.contentType} />
+            </div>
+
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <div className="flex items-center gap-1.5 text-sm text-slate-500">
+                Estimated ROI
+                <ProvenanceTooltip layer="ESTIMATED" underline={false}
+                  detail={`${c.roi.confidenceLevel * 100}% confidence range: ${ratio(c.roi.low)} to ${ratio(c.roi.high)}. This is a performance index converted by the model, not the creator's real financial profit.`}>
+                  <Info className="h-3.5 w-3.5" aria-label="Explain estimated ROI" />
+                </ProvenanceTooltip>
+              </div>
+              <p className="mt-1 flex items-baseline gap-2">
+                <span className="text-2xl font-semibold tabular-nums">~{ratio(c.roi.value)}</span>
+                <span className="text-sm tabular-nums text-slate-500">({ratio(c.roi.low)} - {ratio(c.roi.high)})</span>
+              </p>
+            </div>
+
+            <ProvenanceTooltip layer="PUBLIC" underline={false} detail="Public figures for the last 30 days.">
+              <p className="text-sm text-slate-500">{compact(c.followers)} followers · {c.videosLast30d} videos · {c.livesLast30d} live sessions / 30 days</p>
+            </ProvenanceTooltip>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    function CreatorsGrid() {
+      const [category, setCategory] = useState("all");
+      const [content, setContent] = useState("all");
+      const [sort, setSort] = useState("fit");
+
+      const rows = useMemo(() => {
+        const list = MOCK_CREATORS.filter((c) => (category === "all" || c.category === category) && (content === "all" || c.contentType === content || c.contentType === "BOTH"));
+        return list.sort((a, b) => (sort === "fit" ? b.fitScore - a.fitScore : b.roi.value - a.roi.value));
+      }, [category, content, sort]);
+
+      return (
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Select label="Category" value={category} onChange={setCategory} className="w-48" options={[["all", "All categories"], ...CATEGORIES.map((c) => [c, c])]} />
+            <Tabs value={content} onChange={setContent} items={[["all", "All"], ["LIVE", "Live"], ["VIDEO", "Video"]]} />
+            <Select label="Sort" value={sort} onChange={setSort} className="w-52" options={[["fit", "Sort: Fit score"], ["roi", "Sort: Estimated ROI"]]} />
+          </div>
+          <p className="text-sm text-slate-500">{rows.length} creators · Ranked by fit and estimated performance, not follower count</p>
+          {rows.length === 0 ? (
+            <p className="rounded-lg border py-16 text-center text-slate-500">No creators match the filters.</p>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{rows.map((c) => <CreatorCard key={c.id} c={c} />)}</div>
+          )}
+        </div>
+      );
+    }
+
+    /* 9. WATCHLIST */
+    const REC_STYLE = {
+      SOURCE_NOW: { icon: PackageCheck, cls: "border-emerald-200 bg-emerald-50 text-emerald-800" },
+      TEST_SMALL: { icon: FlaskConical, cls: "border-sky-200 bg-sky-50 text-sky-800" },
+      MONITOR: { icon: Eye, cls: "border-amber-200 bg-amber-50 text-amber-800" },
+      SKIP: { icon: Ban, cls: "border-slate-200 bg-slate-100 text-slate-600" },
+    };
+    const RISK_LABEL = {
+      HIGH: { label: "High risk", cls: "border-red-200 text-red-700" },
+      MEDIUM: { label: "Medium risk", cls: "border-amber-200 text-amber-700" },
+      LOW: { label: "Low risk", cls: "text-slate-500" },
+    };
+
+    function StanceIcon({ stance }) {
+      if (stance === "SUPPORTS") return <Check className="h-4 w-4 text-emerald-600" aria-label="Supports sourcing" />;
+      if (stance === "CONTRADICTS") return <X className="h-4 w-4 text-red-600" aria-label="Does not support sourcing" />;
+      return <Minus className="h-4 w-4 text-slate-400" aria-label="Neutral" />;
+    }
+
+    function DecisionBriefCard({ product, brief, onOpenProfit, compact = false }) {
+      const rec = REC_STYLE[brief.recommendation];
+      const Icon = rec.icon;
+      return (
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Badge variant="outline" className={cx("gap-1.5", rec.cls)}><Icon className="h-3.5 w-3.5" aria-hidden />{brief.headline}</Badge>
+              <ProvenanceTooltip layer="ESTIMATED" underline={false}
+                detail="How certain the recommendation is, based on the width of the estimates' confidence ranges. The wider the range, the lower it is.">
+                <span className="text-xs text-slate-500">Confidence {Math.round(brief.confidence * 100)}%</span>
+              </ProvenanceTooltip>
+            </div>
+            <CardTitle className="text-base leading-snug">{product.name}</CardTitle>
+            <CardDescription>{brief.summary}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4 text-sm">
+            <section aria-label="Evidence" className="space-y-2">
+              <p className="font-medium">Evidence</p>
+              <ul className="space-y-1.5">
+                {brief.evidence.map((e) => (
+                  <li key={e.key} className="flex items-center gap-2">
+                    <StanceIcon stance={e.stance} />
+                    <ProvenanceTooltip layer={e.layer} detail={`Data as of ${formatDateTime(PRODUCTS_AS_OF)}`}>
+                      <span>{e.label}: <span className="tabular-nums">{e.valueText}</span></span>
+                    </ProvenanceTooltip>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            <section aria-label="Risks" className="space-y-2">
+              <p className="font-medium">Risks</p>
+              <ul className="space-y-1.5">
+                {brief.risks.map((r) => (
+                  <li key={r.category + r.text} className="flex items-start gap-2">
+                    <Badge variant="outline" className={cx("shrink-0", RISK_LABEL[r.severity].cls)}>{RISK_LABEL[r.severity].label}</Badge>
+                    <span>{r.text}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+
+            {!compact && (
+              <section aria-label="Next steps" className="space-y-2">
+                <p className="font-medium">Next steps</p>
+                <ul className="list-disc space-y-1 pl-5">{brief.nextSteps.map((s) => <li key={s}>{s}</li>)}</ul>
+              </section>
+            )}
+
+            <div className="flex items-center justify-between gap-2 border-t border-slate-200 pt-3">
+              <p className="text-xs text-slate-500">Rule engine v{brief.engineVersion}, generated from sample data.</p>
+              <Button size="sm" variant="outline" onClick={() => onOpenProfit(product)}>Calculate profit</Button>
+            </div>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    function DecisionBriefs({ onOpenProfit }) {
+      const { items } = useWatchlist();
+      const briefs = useMemo(() => {
+        const ids = new Set(items.filter((i) => i.kind === "PRODUCT").map((i) => i.id));
+        return MOCK_PRODUCTS.filter((p) => ids.has(p.id))
+          .map((p) => ({ product: p, brief: buildBrief(p) }))
+          .sort((a, b) => RECOMMENDATION_RANK[a.brief.recommendation] - RECOMMENDATION_RANK[b.brief.recommendation]);
+      }, [items]);
+
+      return (
+        <section className="space-y-3" aria-labelledby="brief-heading">
+          <div>
+            <h2 id="brief-heading" className="text-lg font-semibold tracking-tight">Decision Brief</h2>
+            <p className="text-sm text-slate-500">Suggested action for each product you watch, with evidence and risks.</p>
+          </div>
+          {briefs.length === 0 ? (
+            <p className="rounded-lg border border-slate-200 py-10 text-center text-sm text-slate-500">Watch at least one product to get a Decision Brief.</p>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {briefs.map(({ product, brief }) => <DecisionBriefCard key={product.id} product={product} brief={brief} onOpenProfit={onOpenProfit} />)}
+            </div>
+          )}
+        </section>
+      );
+    }
+
+    const SEVERITY = {
+      CRITICAL: { label: "Critical", border: "border-l-red-500", icon: CircleAlert, iconCls: "text-red-600", rank: 0 },
+      WARNING: { label: "Warning", border: "border-l-amber-500", icon: TriangleAlert, iconCls: "text-amber-600", rank: 1 },
+      INFO: { label: "Info", border: "border-l-sky-500", icon: Info, iconCls: "text-sky-600", rank: 2 },
+    };
+
+    function useAlertCounts() {
+      const { items, dismissed } = useWatchlist();
+      return useMemo(() => {
+        const m = new Map();
+        const watched = new Set(items.map((i) => `${i.kind}:${i.id}`));
+        for (const a of MOCK_ALERTS) {
+          const key = `${a.entityKind}:${a.entityId}`;
+          if (watched.has(key) && !dismissed.includes(a.id)) m.set(key, (m.get(key) ?? 0) + 1);
+        }
+        return m;
+      }, [items, dismissed]);
+    }
+
+    function AlertPanel() {
+      const { items, dismissed, dismissAlert, restoreAlerts } = useWatchlist();
+      const all = useMemo(() => {
+        const watched = new Set(items.map((i) => `${i.kind}:${i.id}`));
+        return MOCK_ALERTS.filter((a) => watched.has(`${a.entityKind}:${a.entityId}`))
+          .sort((a, b) => SEVERITY[a.severity].rank - SEVERITY[b.severity].rank || b.capturedAt.localeCompare(a.capturedAt));
+      }, [items]);
+      const visible = all.filter((a) => !dismissed.includes(a.id));
+      const hidden = all.length - visible.length;
+
+      return (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle>Alerts</CardTitle>
+              <Badge variant="secondary">{visible.length} new</Badge>
+            </div>
+            <CardDescription>Changes in the items you watch, with reasons and data sources.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {visible.length === 0 ? (
+              <p className="py-6 text-center text-sm text-slate-500">{all.length === 0 ? "No alerts for the items you watch." : "You have handled all alerts."}</p>
+            ) : (
+              <ul className="space-y-3">
+                {visible.map((a) => {
+                  const s = SEVERITY[a.severity];
+                  const Icon = s.icon;
+                  return (
+                    <li key={a.id} className={cx("rounded-md border border-l-4 border-slate-200 p-3", s.border)}>
+                      <div className="flex items-start gap-2">
+                        <Icon className={cx("mt-0.5 h-4 w-4 shrink-0", s.iconCls)} aria-hidden />
+                        <div className="min-w-0 flex-1 space-y-1.5">
+                          <p className="text-sm font-medium leading-snug">{a.title}</p>
+                          <p className="text-xs text-slate-500">{s.label} · {ALERT_TYPE_LABEL[a.type]} · {entityName(a.entityKind, a.entityId)}</p>
+                          <p className="text-sm">{a.explanation}</p>
+                          <ProvenanceTooltip layer={a.evidence.layer} detail={`Observed at ${formatDateTime(a.capturedAt)}${a.evidence.detail ? ` · ${a.evidence.detail}` : ""}`}>
+                            <span className="text-sm tabular-nums">{a.evidence.label}: {a.evidence.before} → {a.evidence.after}</span>
+                          </ProvenanceTooltip>
+                        </div>
+                        <Button variant="ghost" size="icon" className="shrink-0" aria-label={`Hide alert: ${a.title}`} onClick={() => dismissAlert(a.id)}>
+                          <X className="h-4 w-4" aria-hidden />
+                        </Button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+            {hidden > 0 && <Button variant="link" className="h-auto p-0 text-sm" onClick={restoreAlerts}>Show {hidden} hidden alerts again</Button>}
+            <p className="text-xs text-slate-500">Simulated alerts from sample data.</p>
+          </CardContent>
+        </Card>
+      );
+    }
+
+    function WatchlistItems() {
+      const { items, remove } = useWatchlist();
+      const counts = useAlertCounts();
+      const sorted = [...items].sort((a, b) => b.addedAt.localeCompare(a.addedAt));
+      return (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold tracking-tight">Watching</h2>
+            <p className="text-sm text-slate-500">{items.length} items · use the star on the Products / Creator tabs to add or remove.</p>
+          </div>
+          {sorted.length === 0 ? (
+            <p className="rounded-lg border border-slate-200 py-10 text-center text-sm text-slate-500">You are not watching anything yet.</p>
+          ) : (
+            <ul className="divide-y divide-slate-100 rounded-lg border border-slate-200 bg-white">
+              {sorted.map((i) => {
+                const n = counts.get(`${i.kind}:${i.id}`) ?? 0;
+                return (
+                  <li key={`${i.kind}:${i.id}`} className="flex items-center gap-3 px-4 py-3 text-sm">
+                    <Badge variant="secondary">{i.kind === "PRODUCT" ? "Products" : "Creator"}</Badge>
+                    <span className="flex-1 font-medium">{entityName(i.kind, i.id)}</span>
+                    {n > 0 && <Badge variant="outline" className="border-amber-200 text-amber-700">{n} alerts</Badge>}
+                    <span className="hidden text-xs text-slate-500 sm:inline">Added {formatDateTime(i.addedAt)}</span>
+                    <Button variant="ghost" size="icon" aria-label={`Unwatch ${entityName(i.kind, i.id)}`} onClick={() => remove(i.kind, i.id)}>
+                      <X className="h-4 w-4" aria-hidden />
+                    </Button>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </section>
+      );
+    }
+
+    function WatchlistView({ onOpenProfit }) {
+      return (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
+          <div className="space-y-8">
+            <WatchlistItems />
+            <DecisionBriefs onOpenProfit={onOpenProfit} />
+          </div>
+          <div className="lg:sticky lg:top-6 lg:self-start"><AlertPanel /></div>
+        </div>
+      );
+    }
+
+    /* 10. PROFIT ENGINE + CALCULATOR */
+    const finite = (n) => (Number.isFinite(n) ? n : 0);
+    const nonNeg = (n) => Math.max(0, finite(n));
+    const rate = (n) => Math.min(1, nonNeg(n));
+
+    function calculateProfit(input) {
+      const price = nonNeg(input.price), cogs = nonNeg(input.cogs);
+      const f = rate(input.platformFeeRate), a = rate(input.affiliateRate), r = rate(input.returnCancelRate);
+      const other = nonNeg(input.otherCostPerOrder);
+      const adsFixed = input.adsMode === "PER_ORDER_VND" ? nonNeg(input.adsValue) : 0;
+      const adsRate = input.adsMode === "PERCENT_OF_PRICE" ? rate(input.adsValue) : 0;
+
+      const platformFee = price * f, affiliateCommission = price * a, adsCost = adsFixed + price * adsRate;
+      const grossProfit = price - cogs - platformFee - affiliateCommission - adsCost - other;
+      const returnCancelLoss = r * (price - cogs - platformFee - affiliateCommission);
+      const netProfit = grossProfit - returnCancelLoss;
+      const k = (1 - r) * (1 - f - a) - adsRate;
+      const breakEvenPrice = k > 1e-9 ? ((1 - r) * cogs + adsFixed + other) / k : null;
+
+      return {
+        price, cogs, platformFee, affiliateCommission, adsCost, otherCost: other, grossProfit, returnCancelLoss, netProfit,
+        grossMargin: price > 0 ? grossProfit / price : 0, netMargin: price > 0 ? netProfit / price : 0, breakEvenPrice, isValid: price > 0,
+      };
+    }
+
+    function sweepPrices(input, { minRatio = 0.7, maxRatio = 1.5, steps = 16 } = {}) {
+      if (!(input.price > 0)) return [];
+      return Array.from({ length: steps + 1 }, (_, i) => {
+        const price = Math.round(input.price * (minRatio + ((maxRatio - minRatio) * i) / steps));
+        const r = calculateProfit({ ...input, price });
+        return { price, netProfit: r.netProfit, netMargin: r.netMargin };
+      });
+    }
+
+    const DEFAULTS = { price: 199000, cogs: 80000, feePct: 8, affiliatePct: 10, adsMode: "PER_ORDER_VND", adsVnd: 20000, adsPct: 10, returnPct: 5, other: 0 };
+
+    function MoneyField({ id, label, value, onChange, hint }) {
+      return (
+        <div className="space-y-1.5">
+          <Label htmlFor={id}>{label}</Label>
+          <div className="relative">
+            <Input id={id} inputMode="numeric" placeholder="0" value={value === 0 ? "" : nf.format(value)}
+              onChange={(e) => { const d = e.target.value.replace(/\D/g, ""); onChange(d === "" ? 0 : Number(d)); }}
+              className="pr-9 text-right tabular-nums" />
+            <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">₫</span>
+          </div>
+          {hint && <p className="text-xs text-slate-500">{hint}</p>}
+        </div>
+      );
+    }
+
+    function PercentField({ id, label, value, onChange, max = 100, step = 0.5, hint }) {
+      return (
+        <div className="space-y-2">
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor={id}>{label}</Label>
+            <div className="relative w-24">
+              <Input id={id} type="number" min={0} max={max} step={step} value={value}
+                onChange={(e) => onChange(clamp(parseFloat(e.target.value) || 0, 0, max))} className="pr-7 text-right tabular-nums" />
+              <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-slate-500">%</span>
+            </div>
+          </div>
+          <input type="range" aria-label={label} min={0} max={max} step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-full accent-slate-900" />
+          {hint && <p className="text-xs text-slate-500">{hint}</p>}
+        </div>
+      );
+    }
+
+    function Metric({ label, value, sub, tone }) {
+      const color = tone === "good" ? "text-emerald-600" : tone === "bad" ? "text-red-600" : "text-slate-900";
+      return (
+        <div className="rounded-lg border border-slate-200 bg-white p-4">
+          <p className="text-sm text-slate-500">{label}</p>
+          <p className={cx("mt-1 text-2xl font-semibold tabular-nums", color)}>{value}</p>
+          {sub && <p className="mt-1 text-xs text-slate-500">{sub}</p>}
+        </div>
+      );
+    }
+
+    function CostBar({ r }) {
+      const segs = [
+        { key: "cogs", label: "Cost price", value: r.cogs, cls: "bg-slate-500" },
+        { key: "fee", label: "Platform fee", value: r.platformFee, cls: "bg-amber-500" },
+        { key: "aff", label: "Affiliate commission", value: r.affiliateCommission, cls: "bg-violet-500" },
+        { key: "ads", label: "Ads cost", value: r.adsCost, cls: "bg-sky-500" },
+        { key: "other", label: "Other costs", value: r.otherCost, cls: "bg-zinc-400" },
+        { key: "loss", label: "Loss from returns/cancellations", value: r.returnCancelLoss, cls: "bg-rose-500" },
+        { key: "profit", label: "Net profit", value: r.netProfit, cls: "bg-emerald-500" },
+      ];
+      const drawn = segs.filter((s) => s.value > 0);
+      const total = Math.max(r.price, drawn.reduce((s, x) => s + x.value, 0));
+      const overrun = total > r.price + 0.5;
+      return (
+        <div className="space-y-4">
+          <div className="relative">
+            <div className="flex h-9 w-full overflow-hidden rounded-md bg-slate-100" role="img" aria-label="Cost and profit breakdown of the selling price">
+              {drawn.map((s) => <div key={s.key} className={s.cls} style={{ width: `${(s.value / total) * 100}%` }} title={`${s.label}: ${vnd(s.value)}`} />)}
+            </div>
+            {overrun && (
+              <div className="absolute inset-y-[-4px] border-l-2 border-dashed border-slate-900" style={{ left: `${(r.price / total) * 100}%` }}>
+                <span className="absolute -top-5 left-1 whitespace-nowrap text-xs text-slate-500">Selling price</span>
+              </div>
+            )}
+          </div>
+          {overrun && <p className="text-sm text-red-600">Total cost exceeds the selling price by {vnd(total - r.price)} per order: this price loses money.</p>}
+          <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
+            {segs.map((s) => (
+              <li key={s.key} className="flex items-center gap-2 text-sm">
+                <span className={cx("h-3 w-3 shrink-0 rounded-sm", s.cls)} aria-hidden />
+                <span className="flex-1 text-slate-500">{s.label}</span>
+                <span className="tabular-nums">{vnd(s.value)}</span>
+                <span className="w-14 text-right tabular-nums text-slate-500">{pct(r.price > 0 ? s.value / r.price : 0)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      );
+    }
+
+    function MarginCurve({ inputs }) {
+      const data = useMemo(() => sweepPrices(inputs).map((p) => ({ price: p.price, margin: +(p.netMargin * 100).toFixed(2), profit: p.netProfit })), [inputs]);
+      if (data.length === 0) return null;
+      return (
+        <div className="h-56 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis dataKey="price" tickFormatter={(v) => `${Math.round(v / 1000)}k`} fontSize={12} />
+              <YAxis tickFormatter={(v) => `${v}%`} fontSize={12} width={48} />
+              <RTooltip formatter={(v, name) => (name === "margin" ? [`${v}%`, "Profit margin"] : [vnd(v), "Net profit"])} labelFormatter={(v) => `Selling price ${vnd(Number(v))}`} />
+              <ReferenceLine y={0} stroke="#94a3b8" />
+              <ReferenceLine x={inputs.price} stroke="#64748b" strokeDasharray="4 4" />
+              <Line type="monotone" dataKey="margin" stroke="#059669" strokeWidth={2} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      );
+    }
+
+    function ProfitCalculator({ seed }) {
+      const [f, setF] = useState(() => (seed ? { ...DEFAULTS, price: seed.price, cogs: Math.round(seed.price * 0.4) } : DEFAULTS));
+      const set = (key) => (v) => setF((p) => ({ ...p, [key]: v }));
+
+      const inputs = useMemo(() => ({
+        price: f.price, cogs: f.cogs, platformFeeRate: f.feePct / 100, affiliateRate: f.affiliatePct / 100,
+        adsMode: f.adsMode, adsValue: f.adsMode === "PER_ORDER_VND" ? f.adsVnd : f.adsPct / 100,
+        returnCancelRate: f.returnPct / 100, otherCostPerOrder: f.other,
+      }), [f]);
+      const r = useMemo(() => calculateProfit(inputs), [inputs]);
+      const tone = r.netProfit > 0 ? "good" : r.netProfit < 0 ? "bad" : "neutral";
+
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-start gap-3 rounded-lg border border-slate-200 bg-slate-50 p-4">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" aria-hidden />
+            <p className="flex-1 text-sm">
+              {seed ? <>Calculating for <b>{seed.name}</b>: the selling price comes from public data and the cost price is a placeholder at 40% of it, so replace it with your real purchase price. </> : null}
+              Inputs are provided by you. The system does not use competitors' return/cancel rates.
+            </p>
+            <Badge variant="outline">Figures you entered</Badge>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,420px)_minmax(0,1fr)]">
+            <Card className="lg:self-start">
+              <CardHeader>
+                <CardTitle>Product inputs</CardTitle>
+                <CardDescription>The values shown are samples. Replace them with your real figures.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <MoneyField id="price" label="Expected selling price" value={f.price} onChange={set("price")} />
+                <MoneyField id="cogs" label="Cost price (COGS)" value={f.cogs} onChange={set("cogs")} />
+                <PercentField id="fee" label="Platform fee" value={f.feePct} onChange={set("feePct")} max={30} hint="Total marketplace commission and transaction fees you pay, as a share of the selling price." />
+                <PercentField id="aff" label="Affiliate commission" value={f.affiliatePct} onChange={set("affiliatePct")} max={50} />
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <Label>Estimated ads cost</Label>
+                    <Tabs value={f.adsMode} onChange={set("adsMode")} items={[["PER_ORDER_VND", "₫ / order"], ["PERCENT_OF_PRICE", "% of price"]]} />
+                  </div>
+                  {f.adsMode === "PER_ORDER_VND"
+                    ? <MoneyField id="ads-vnd" label="Ads per order" value={f.adsVnd} onChange={set("adsVnd")} />
+                    : <PercentField id="ads-pct" label="Ads as % of price" value={f.adsPct} onChange={set("adsPct")} max={60} />}
+                </div>
+                <PercentField id="return" label="Expected return/cancel rate" value={f.returnPct} onChange={set("returnPct")} max={50}
+                  hint="Returned/cancelled orders: platform fee and commission are refunded and goods return to stock; ads and other costs are still lost." />
+                <MoneyField id="other" label="Other cost per order (optional)" value={f.other} onChange={set("other")} hint="Packaging, shipping you cover, etc." />
+              </CardContent>
+            </Card>
+
+            <div className="space-y-6">
+              {!r.isValid ? (
+                <Card><CardContent className="py-10 pt-10 text-center text-sm text-slate-500">Enter a selling price above 0 to see results.</CardContent></Card>
+              ) : (
+                <>
+                  <div className="grid gap-4 sm:grid-cols-3">
+                    <Metric label="Gross profit / order" value={vnd(r.grossProfit)} sub={`${pct(r.grossMargin)} of price, if the order succeeds`} tone={r.grossProfit >= 0 ? "neutral" : "bad"} />
+                    <Metric label="Net profit / order" value={vnd(r.netProfit)} sub="Expected, after returns/cancellations" tone={tone} />
+                    <Metric label="Net profit margin" value={pct(r.netMargin)} sub="Net profit ÷ selling price" tone={tone} />
+                  </div>
+                  <Card>
+                    <CardHeader><CardTitle>Price breakdown</CardTitle><CardDescription>The selling price of {vnd(r.price)} breaks down as follows (per order).</CardDescription></CardHeader>
+                    <CardContent><CostBar r={r} /></CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Profit margin by price</CardTitle>
+                      <CardDescription>
+                        {r.breakEvenPrice !== null
+                          ? `Break-even price: ${vnd(r.breakEvenPrice)}. The dashed line is the expected selling price.`
+                          : "With the current fee structure, no price gives a positive profit. Reduce percentage fees or returns."}
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent><MarginCurve inputs={inputs} /></CardContent>
+                  </Card>
+                </>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    /* 11. LANDING PAGE & APP ENTRYPOINT */
+    function Reveal({ children, delay = 0, className = "" }) {
+      const ref = useRef(null);
+      useEffect(() => {
+        const el = ref.current;
+        if (!el || typeof IntersectionObserver === "undefined") { el?.classList.add("is-in"); return; }
+        const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { el.classList.add("is-in"); io.disconnect(); } }, { threshold: 0.15 });
+        io.observe(el);
+        return () => io.disconnect();
+      }, []);
+      return <div ref={ref} className={cx("ts-reveal", className)} style={{ transitionDelay: `${delay}ms` }}>{children}</div>;
+    }
+
+    const scrollToId = (id) => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const H2 = ({ children }) => <h2 className="text-3xl md:text-4xl font-semibold tracking-tight" style={{ lineHeight: 1.1 }}>{children}</h2>;
+
+    function MiniProfit({ onOpen }) {
+      const [cogs, setCogs] = useState(80000);
+      const r = calculateProfit({ price: 199000, cogs, platformFeeRate: 0.08, affiliateRate: 0.1, adsMode: "PER_ORDER_VND", adsValue: 20000, returnCancelRate: 0.05, otherCostPerOrder: 0 });
+      return (
+        <div className="ts-tile flex h-full flex-col gap-4">
+          <h3 className="text-xl font-semibold tracking-tight">Real profit on every order</h3>
+          <p className="ts-muted text-sm">Drag the cost price and net profit updates instantly. Platform fee, commission, ads and returns included.</p>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between text-sm"><label htmlFor="mini-cogs">Cost price</label><span className="tabular-nums">{vnd(cogs)}</span></div>
+            <input id="mini-cogs" type="range" min={20000} max={150000} step={1000} value={cogs} onChange={(e) => setCogs(Number(e.target.value))} className="w-full" style={{ accentColor: "var(--accent)" }} />
+          </div>
+          <div>
+            <p className="ts-muted text-sm">Net profit per order (selling price 199,000 ₫)</p>
+            <p className="text-3xl font-semibold tabular-nums" style={{ color: r.netProfit >= 0 ? "var(--ink)" : "#d6453d" }}>{vnd(r.netProfit)}</p>
+            <p className="ts-muted text-sm tabular-nums">Margin {pct(r.netMargin)}</p>
+          </div>
+          <button className="ts-btn ts-btn-ghost mt-auto self-start" onClick={() => onOpen("profit")}>Open profit calculator</button>
+        </div>
+      );
+    }
+
+    function Landing({ onOpen }) {
+      const hero = MOCK_PRODUCTS.find((p) => p.id === "p09");
+      const heroBrief = useMemo(() => buildBrief(hero), [hero]);
+      const top = useMemo(() => [...MOCK_PRODUCTS].filter((p) => p.growth.low > 0 && p.saturationScore < 50).sort((a, b) => b.growth.value - a.growth.value).slice(0, 4), []);
+      const creators = [...MOCK_CREATORS].sort((a, b) => b.fitScore - a.fitScore).slice(0, 3);
+
+      return (
+        <div>
+          <header className="sticky top-0 z-40" style={{ background: "color-mix(in srgb, var(--bg) 88%, transparent)", backdropFilter: "blur(10px)", borderBottom: "1px solid var(--line)" }}>
+            <div className="mx-auto flex h-16 w-full max-w-7xl items-center justify-between px-4 md:px-8">
+              <span className="flex items-center gap-2 font-semibold tracking-tight">
+                <span className="ts-accent-bg flex h-8 w-8 items-center justify-center rounded-xl"><TrendingUp className="h-4 w-4" strokeWidth={2} aria-hidden /></span>
+                Wavecatch
+              </span>
+              <nav className="hidden items-center gap-7 text-sm md:flex" aria-label="Main navigation">
+                <button className="ts-muted hover:underline" onClick={() => scrollToId("tinh-nang")}>Features</button>
+                <button className="ts-muted hover:underline" onClick={() => scrollToId("cach-dung")}>How it works</button>
+                <button className="ts-muted hover:underline" onClick={() => scrollToId("du-lieu")}>Data sources</button>
+              </nav>
+              <button className="ts-btn ts-btn-primary" onClick={() => onOpen("products")}>Open the app<ArrowRight className="h-4 w-4" strokeWidth={2} aria-hidden /></button>
+            </div>
+          </header>
+
+          <section className="ts-hero mx-auto grid w-full max-w-7xl items-center gap-10 px-4 py-10 md:px-8 lg:grid-cols-12">
+            <div className="lg:col-span-6">
+              <h1 className="ts-rise text-4xl font-semibold tracking-tighter md:text-5xl" style={{ lineHeight: 1.06 }}>Catch the wave. Skip the bad buys.</h1>
+              <p className="ts-rise ts-muted mt-5 max-w-md text-lg" style={{ animationDelay: "120ms" }}>See which products are rising, which creators sell, and what each order earns, with sources.</p>
+              <div className="ts-rise mt-8 flex flex-wrap items-center gap-3" style={{ animationDelay: "240ms" }}>
+                <button className="ts-btn ts-btn-primary" onClick={() => onOpen("products")}>Open the app<ArrowRight className="h-4 w-4" strokeWidth={2} aria-hidden /></button>
+                <button className="ts-btn ts-btn-ghost" onClick={() => scrollToId("cach-dung")}>See how it works</button>
+              </div>
+            </div>
+            <div className="ts-rise lg:col-span-6" style={{ animationDelay: "200ms" }}>
+              <div className="relative overflow-hidden rounded-3xl" style={{ background: "var(--tint)", minHeight: 560 }}>
+                <img src="https://picsum.photos/seed/seller-packing-orders/900/1100" alt="A seller packing orders" className="absolute inset-0 h-full w-full object-cover" />
+                <div className="absolute inset-0" style={{ background: "linear-gradient(180deg, rgb(14 15 17 / .08) 0%, rgb(14 15 17 / .78) 100%)" }} />
+                <div className="relative flex h-full items-end justify-end p-3 md:p-5" style={{ minHeight: 560 }}>
+                  <div className="w-full md:w-5/6"><DecisionBriefCard product={hero} brief={heroBrief} compact onOpenProfit={() => onOpen("profit")} /></div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="tinh-nang" className="mx-auto w-full max-w-7xl px-4 py-20 md:px-8">
+            <Reveal><H2>What to stock, who sells it, what you earn</H2></Reveal>
+            <div className="mt-10 grid gap-4 md:grid-cols-5">
+              <Reveal className="md:col-span-3 md:row-span-2">
+                <div className="ts-tile flex h-full flex-col gap-5">
+                  <div>
+                    <h3 className="text-xl font-semibold tracking-tight">Which products are rising with few rivals?</h3>
+                    <p className="ts-muted mt-2 max-w-md text-sm">Estimated growth, competing shops and saturation sit side by side on every row.</p>
+                  </div>
+                  <ul className="space-y-4">
+                    {top.map((p) => {
+                      const lv = saturationLevel(p.saturationScore); const s = SATURATION_STYLE[lv];
+                      return (
+                        <li key={p.id} className="flex items-center gap-4">
+                          <img src={`https://picsum.photos/seed/${p.id}-shop-product/96/96`} alt="" loading="lazy" className="h-12 w-12 shrink-0 rounded-xl object-cover" style={{ background: "var(--tint)" }} />
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-medium">{p.name}</p>
+                            <p className="ts-muted text-xs">{p.shopCount} competing shops</p>
+                          </div>
+                          <ProvenanceTooltip layer="ESTIMATED" detail={`80% confidence range: ${signedPct(p.growth.low)} to ${signedPct(p.growth.high)}.`}>
+                            <span className="text-sm font-semibold tabular-nums" style={{ color: "#12805c" }}>{signedPct(p.growth.value)}</span>
+                          </ProvenanceTooltip>
+                          <Badge variant="outline" className={cx("hidden gap-1.5 sm:inline-flex", s.cls)}>{SATURATION_LABEL[lv]}</Badge>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <button className="ts-btn ts-btn-ghost mt-auto self-start" onClick={() => onOpen("products")}>Open product list</button>
+                </div>
+              </Reveal>
+
+              <Reveal className="md:col-span-2" delay={80}>
+                <div className="ts-tile ts-tile-accent flex h-full flex-col gap-4">
+                  <h3 className="text-xl font-semibold tracking-tight">Which creators really sell?</h3>
+                  <ul className="space-y-3">
+                    {creators.map((c) => (
+                      <li key={c.id} className="flex items-center gap-3">
+                        <img src={`https://picsum.photos/seed/${c.id}-portrait/96/96`} alt="" loading="lazy" className="h-10 w-10 shrink-0 rounded-full object-cover" style={{ background: "var(--tint)" }} />
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium">{c.name}</span>
+                        <span className="text-sm tabular-nums">~{ratio(c.roi.value)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <button className="ts-btn ts-btn-light mt-auto self-start" onClick={() => onOpen("creators")}>Xem creator</button>
+                </div>
+              </Reveal>
+
+              <Reveal className="md:col-span-2" delay={160}><MiniProfit onOpen={onOpen} /></Reveal>
+            </div>
+          </section>
+
+          <section id="cach-dung" className="mx-auto w-full max-w-7xl px-4 py-20 md:px-8">
+            <Reveal><H2>Three steps before you pay a supplier</H2></Reveal>
+            <div className="mt-12 space-y-10">
+              {[
+                ["Filter", "Search by category, price range and saturation. The table sorts and exports to CSV."],
+                ["Read the evidence", "Every recommendation comes with evidence for, evidence against and specific risks."],
+                ["Work out profit", "Enter your cost price, platform fee, commission and return rate to get net profit."],
+              ].map(([verb, text], i) => (
+                <Reveal key={verb} delay={i * 80} className="grid items-baseline gap-2 md:grid-cols-12 md:gap-8">
+                  <p className="text-3xl font-semibold tracking-tight md:col-span-4 md:text-4xl">{verb}</p>
+                  <p className="ts-muted max-w-xl text-lg md:col-span-8">{text}</p>
+                </Reveal>
+              ))}
+            </div>
+          </section>
+
+          <section id="du-lieu" className="mx-auto w-full max-w-7xl px-4 pb-20 md:px-8">
+            <Reveal>
+              <div className="grid items-center gap-8 rounded-3xl p-8 md:grid-cols-2 md:p-12" style={{ background: "var(--tint)" }}>
+                <div>
+                  <H2>Which numbers are estimates, which are real</H2>
+                  <p className="ts-muted mt-4 max-w-md">Every metric carries one of three data layers. Hover each number on the right to see it.</p>
+                </div>
+                <ul className="ts-tile space-y-4 text-lg">
+                  <li className="flex items-center justify-between gap-4"><span className="ts-muted text-base">Listed price</span>
+                    <ProvenanceTooltip layer="PUBLIC" detail="Observed from the public sales page."><span className="font-semibold tabular-nums">69,000 ₫</span></ProvenanceTooltip></li>
+                  <li className="flex items-center justify-between gap-4"><span className="ts-muted text-base">7-day growth</span>
+                    <ProvenanceTooltip layer="ESTIMATED" detail="80% confidence range: +86% to +160%."><span className="font-semibold tabular-nums">+121%</span></ProvenanceTooltip></li>
+                  <li className="flex items-center justify-between gap-4"><span className="ts-muted text-base">Net profit per order</span>
+                    <ProvenanceTooltip layer="FIRST_PARTY" detail="Calculated from the cost price and fees you entered."><span className="font-semibold tabular-nums">{vnd(calculateProfit({ price: 199000, cogs: 80000, platformFeeRate: 0.08, affiliateRate: 0.1, adsMode: "PER_ORDER_VND", adsValue: 20000, returnCancelRate: 0.05, otherCostPerOrder: 0 }).netProfit)}</span></ProvenanceTooltip></li>
+                </ul>
+              </div>
+            </Reveal>
+          </section>
+
+          <section className="mx-auto w-full max-w-7xl px-4 pb-24 md:px-8">
+            <Reveal className="max-w-2xl">
+              <h2 className="text-4xl font-semibold tracking-tighter md:text-5xl" style={{ lineHeight: 1.06 }}>Try first, stock later.</h2>
+              <p className="ts-muted mt-4 text-lg">Open the app with sample data, watch a few products and see sourcing suggestions.</p>
+              <button className="ts-btn ts-btn-primary mt-8" onClick={() => onOpen("products")}>Open the app<ArrowRight className="h-4 w-4" strokeWidth={2} aria-hidden /></button>
+            </Reveal>
+          </section>
+
+          <footer className="mx-auto w-full max-w-7xl px-4 py-8 text-sm md:px-8" style={{ borderTop: "1px solid var(--line)" }}>
+            <p className="ts-muted">Wavecatch. Data in the app is sample data.</p>
+          </footer>
+        </div>
+      );
+    }
+
+    const PAGES = {
+      products: { title: "Rising products", badge: true, desc: "Filter products growing fast with few rivals. Hover any number to see its source and confidence." },
+      creators: { title: "Creators that sell", badge: true, desc: "Ranked by fit and estimated performance, not just follower count." },
+      watchlist: { title: "Watchlist", badge: true, desc: "Watch products and creators, get explained alerts and data-based suggested actions." },
+      profit: { title: "Check profit before you scale", badge: false, desc: "Enter your cost price, fees and return/cancel rate to see the real margin per order." },
+    };
+
+    function App() {
+      const [view, setView] = useState("landing");
+      const [tab, setTab] = useState("products");
+      const [profitSeed, setProfitSeed] = useState(null);
+      const [profitKey, setProfitKey] = useState(0);
+      const page = PAGES[tab];
+
+      const open = (t) => { setTab(t); setView("app"); window.scrollTo(0, 0); };
+      const openProfit = (product) => { setProfitSeed(product && product.price ? product : null); setProfitKey((k) => k + 1); open("profit"); };
+
+      return (
+        <WatchlistProvider>
+          <div className="ts-root">
+            {view === "landing" ? <Landing onOpen={open} /> : (
+              <>
+                <nav className="sticky top-0 z-40 border-b border-slate-200 bg-white/90 backdrop-blur">
+                  <div className="mx-auto flex w-full max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-8">
+                    <button className="flex items-center gap-2 font-semibold tracking-tight" onClick={() => { setView("landing"); window.scrollTo(0, 0); }} aria-label="Back to the intro page">
+                      <span className="ts-accent-bg flex h-8 w-8 items-center justify-center rounded-xl"><TrendingUp className="h-4 w-4" aria-hidden /></span>
+                      Wavecatch
+                    </button>
+                    <Tabs value={tab} onChange={(v) => { if (v !== "profit") setProfitSeed(null); setTab(v); }}
+                      items={[["products", "Products", LayoutList], ["creators", "Creator", Users], ["watchlist", "Watchlist", Star], ["profit", "Profit", Calculator]]} />
+                  </div>
+                </nav>
+                <main className="mx-auto w-full max-w-7xl space-y-6 p-4 md:p-8">
+                  <header className="space-y-1">
+                    <div className="flex items-center gap-3">
+                      <h1 className="text-2xl font-semibold tracking-tight">{page.title}</h1>
+                      {page.badge && <Badge variant="secondary">Sample data</Badge>}
+                    </div>
+                    <p className="text-slate-500">{page.desc}</p>
+                  </header>
+                  {tab === "products" && <ProductsTable />}
+                  {tab === "creators" && <CreatorsGrid />}
+                  {tab === "watchlist" && <WatchlistView onOpenProfit={openProfit} />}
+                  {tab === "profit" && <ProfitCalculator key={profitKey} seed={profitSeed} />}
+                </main>
+              </>
+            )}
+          </div>
+        </WatchlistProvider>
+      );
+    }
+
+    // Render App
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
